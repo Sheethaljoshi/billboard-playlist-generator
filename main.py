@@ -5,6 +5,7 @@ from spotipy.oauth2 import SpotifyOAuth
 
 
 date=input("Enter date to find Billboard's Hot 100 in YYYY-MM-DD: ")
+special=input("Why is this day special?")
 
 URL = ("https://www.billboard.com/charts/hot-100/"+date)
 response = requests.get(URL)
@@ -15,9 +16,6 @@ soup=BeautifulSoup(website_html, "html.parser")
 songs = soup.find_all(name="h3", id="title-of-a-story", class_="a-no-trucate")
 
 songs_array=[song.getText().strip() for song in songs]
-
-for song_t in songs_array:
-    print(song_t)
 
 sp = spotipy.Spotify(
     auth_manager=SpotifyOAuth(
@@ -31,3 +29,19 @@ sp = spotipy.Spotify(
     )
 )
 user_id = sp.current_user()["id"]
+
+song_uris=[]
+
+year = date.split("-")[0]
+
+for song_t in songs_array:
+    name= sp.search(q=f"track:{song_t} year:{year}", type='track')
+    try:
+        uri=name["tracks"]["items"][0]["uri"]
+        song_uris.append(uri)
+    except IndexError:
+        print(f"{song_t} doesn't exist in Spotify. Skipped.")
+        
+playlist = sp.user_playlist_create(user=user_id, name=f"{date} Billboard 100 aKa - {special}", public=False)
+
+sp.playlist_add_items(playlist_id=playlist["id"], items=song_uris)
